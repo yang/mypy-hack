@@ -60,20 +60,42 @@ def format_state(pretty=False):
     lines = []
     for loc, var in sorted(var_db.keys()):
         lines.append('%s: %s' % (var, var_db[(loc, var)]))
-    funcnames = sorted(set(func_return_db.keys()))
+    funcnames = sorted(set(func_return_db.keys()), key=lambda tup: (tup[4], tup[0], tup[3]))
     prevclass = ''
     indent = ''
+    prevsource = ''
+    cur_pyi = None
+    def emit(line):
+        lines.append(line)
+        cur_pyi.write(line+'\n')
     for funcid in funcnames:
-        curclass, name, sourcefile, sourceline = funcid
-        if curclass != prevclass:
+        curclass, name, sourcefile, sourceline, module = funcid
+        if module is None:
+            print 'got module=None:', funcid
+            continue
+        if sourcefile != prevsource:
+            if cur_pyi: cur_pyi.close()
+            path = 'pyi/'+module.replace('.','/')+'.py'
+            try: os.makedirs(os.path.dirname(path))
+            except: pass
+            cur_pyi = open(path,'w')
+            lines.append('')
+            lines.append('=== ' + module + ' ===')
+            prevsource = sourcefile
+        if curclass != prevclass or sourcefile != prevsource:
             if curclass:
-                lines.append('class %s(...):' % curclass)
+                emit('class %s(...):' % curclass)
                 indent = ' ' * 4
             else:
                 indent = ''
             prevclass = curclass
 
-        lines.append(format_sig(funcid, name, indent, pretty))
+        try:
+            emit(format_sig(funcid, name, indent, pretty))
+        except Exception as ex:
+            import sys
+            print >> sys.stderr, 'Error processing %s: %s' % (name, ex)
+    cur_pyi.close()
     return '\n'.join(lines)
 
 
@@ -299,7 +321,7 @@ def infer_signature(func, class_name=''):
     except:
         return func
 
-    funcid = (class_name, func.__name__, funcfile, sourceline)
+    funcid = (class_name, func.__name__, funcfile, sourceline, func.__module__)
     func_source_db[funcid] = ''.join(funcsource)
 
     try:
@@ -601,7 +623,7 @@ class Instance(TypeBase):
         elif self.typeobj == Match:
             return "Match"
         else:
-            return self.typeobj.__name__
+            return '%s.%s' % (self.typeobj.__module__, self.typeobj.__name__)
 
     def __repr__(self):
         return 'Instance(%s)' % self

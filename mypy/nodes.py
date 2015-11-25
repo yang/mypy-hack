@@ -1719,6 +1719,8 @@ def clean_up(s: str) -> str:
 
 
 def function_type(func: FuncBase, fallback: 'mypy.types.Instance') -> 'mypy.types.FunctionLike':
+    while not hasattr(func, 'type'):
+        func = func.func
     if func.type:
         assert isinstance(func.type, mypy.types.FunctionLike)
         return cast(mypy.types.FunctionLike, func.type)

@@ -15,6 +15,7 @@ import shlex
 import subprocess
 import sys
 from os.path import dirname, basename
+from mypy.defaults import PYTHON2_VERSION
 
 from typing import Dict, List, Tuple, cast, Set, Union, Optional
 
@@ -150,7 +151,7 @@ def build(sources: List[BuildSource],
         # debug).
         lib_path.insert(0, os.path.join(os.path.dirname(__file__), 'test', 'data', 'lib-stub'))
     else:
-        for source in sources:
+        for source in []: # sources:
             if source.path:
                 # Include directory of the program file in the module search path.
                 lib_path.insert(
@@ -229,11 +230,6 @@ def default_lib_path(data_dir: str, pyversion: Tuple[int, int],
     # IDEA: Make this more portable.
     path = []  # type: List[str]
 
-    # Add MYPYPATH environment variable to library path, if defined.
-    path_env = os.getenv('MYPYPATH')
-    if path_env is not None:
-        path[:0] = path_env.split(os.pathsep)
-
     auto = os.path.join(data_dir, 'stubs-auto')
     if os.path.isdir(auto):
         data_dir = auto
@@ -252,6 +248,11 @@ def default_lib_path(data_dir: str, pyversion: Tuple[int, int],
     # Add fallback path that can be used if we have a broken installation.
     if sys.platform != 'win32':
         path.append('/usr/local/lib/mypy')
+
+    # Add MYPYPATH environment variable to library path, if defined.
+    path_env = os.getenv('MYPYPATH')
+    if path_env is not None:
+        path.extend(path_env.split(os.pathsep))
 
     # Contents of Python's sys.path go last, to prefer the stubs
     # TODO: To more closely model what Python actually does, builtins should
@@ -375,13 +376,21 @@ class BuildManager:
             self.errors.set_import_context(next.import_context)
             # Process the state. The process method is reponsible for adding a
             # new state object representing the new state of the file.
-            next.process()
+            try: next.process()
+            except Exception as ex:
+                import logging
+                logging.exception('got error processing file %s:', next.path)
 
             # Raise exception if the build failed. The build can fail for
             # various reasons, such as parse error, semantic analysis error,
             # etc.
             if self.errors.is_blockers():
-                self.errors.raise_error()
+                try:
+                    self.errors.raise_error()
+                except Exception as e:
+                    for m in e.messages:
+                        sys.stderr.write(m + '\n')
+                    self.errors.error_info.clear()
 
         # If there were no errors, all files should have been fully processed.
         for s in self.states:
@@ -497,7 +506,7 @@ class BuildManager:
                 rel -= 1
             if rel != 0:
                 file_id = ".".join(file_id.split(".")[:-rel])
-            new_id = file_id + "." + imp.id if imp.id else file_id
+            new_id = (file_id + "." + imp.id if imp.id else file_id).lstrip('.')
 
             return new_id
 
@@ -873,6 +882,12 @@ def read_module_source_from_file(id: str,
       lib_path: library search path
     """
     path = find_module(id, lib_path)
+    if path is None and False:
+        outdir = '/Users/yang/proj/sales/stubs/' # +'/'.join(id.split('.'))+'.pyi'
+        from mypy.stubgen import generate_stub_for_module
+        path = generate_stub_for_module(id, outdir, add_header=True, sigs={}, class_sigs={},
+                                        pyversion=PYTHON2_VERSION)
+
     if path is not None:
         text = ''
         try:
@@ -883,6 +898,14 @@ def read_module_source_from_file(id: str,
                 f.close()
         except IOError:
             return None, None
+        except UnicodeDecodeError:
+            f = open(path, encoding='latin1')
+            try:
+                text = f.read()
+            except:
+                return None, None
+            finally:
+                f.close()
         return path, text
     else:
         return None, None

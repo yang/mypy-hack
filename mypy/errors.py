@@ -209,6 +209,16 @@ class Errors:
         prev_type = None  # type: str
 
         for e in errors:
+            if e.file.startswith('/') and not e.file.startswith('/Users/yang/proj/sales/'):
+                continue
+            if e.message.startswith('Cannot determine consistent method resolution order') or \
+                    e.message.startswith('No module named') or \
+                    e.message.startswith('Module has no attribute') or \
+                    e.message.startswith('No overload variant of "dict" ') or \
+                    e.message.startswith('Cycle in inheritance') or \
+                    e.message.startswith("Unexpected keyword argument") and e.message.endswith(' "dict"') or \
+                    e.message.endswith('already defined'):
+                continue
             # Report module import context, if different from previous message.
             if e.import_ctx != prev_import_context:
                 last = len(e.import_ctx) - 1

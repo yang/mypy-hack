@@ -330,7 +330,7 @@ class TypeChecker(NodeVisitor[Type]):
     # Set to True on return/break/raise, False on blocks that can block any of them
     breaking_out = False
     # Do weak type checking in this file
-    weak_opts = set()        # type: Set[str]
+    weak_opts = set(['!'])        # type: Set[str]
 
     globals = None  # type: SymbolTable
     locals = None  # type: SymbolTable
@@ -356,7 +356,7 @@ class TypeChecker(NodeVisitor[Type]):
         self.type_context = []
         self.dynamic_funcs = []
         self.function_stack = []
-        self.weak_opts = set()  # type: Set[str]
+        self.weak_opts = set(['!'])  # type: Set[str]
 
     def visit_file(self, file_node: MypyFile, path: str) -> None:
         """Type check a mypy file with the given path."""
@@ -865,7 +865,7 @@ class TypeChecker(NodeVisitor[Type]):
         self.binder.push_frame()
         self.accept(defn.defs)
         self.binder = old_binder
-        self.check_multiple_inheritance(typ)
+        #self.check_multiple_inheritance(typ)
         self.errors.pop_type()
 
     def check_multiple_inheritance(self, typ: TypeInfo) -> None:
@@ -1945,6 +1945,7 @@ class TypeChecker(NodeVisitor[Type]):
     def typing_mode_none(self) -> bool:
         if self.is_dynamic_function():
             return not self.weak_opts
+            #return False
         elif self.function_stack:
             return False
         else:
@@ -1967,6 +1968,7 @@ class TypeChecker(NodeVisitor[Type]):
             return 'global' not in self.weak_opts
 
     def is_dynamic_function(self) -> bool:
+        return False
         return len(self.dynamic_funcs) > 0 and self.dynamic_funcs[-1]
 
     def lookup(self, name: str, kind: int) -> SymbolTableNode:

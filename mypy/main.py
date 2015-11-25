@@ -167,14 +167,12 @@ def process_options(args: List[str]) -> Tuple[List[BuildSource], Options]:
     if not args:
         usage('Missing target file or module')
 
-    if args[1:]:
-        usage('Extra argument: {}'.format(args[1]))
-
     if options.python_path and options.pyversion[0] == 2:
         usage('Python version 2 (or --py2) specified, '
               'but --use-python-path will search in sys.path of Python 3')
 
-    return [BuildSource(args[0], None, None)], options
+    #return [BuildSource(arg, arg.replace('/Users/yang/proj/sales/ts/rel/','').replace('/Users/yang/proj/sales/','').replace('.py','').replace('/','.')+'__main__', None) for arg in args], options
+    return [BuildSource(arg, arg.replace('/Users/yang/proj/sales/ts/rel/','').replace('/Users/yang/proj/sales/','').replace('.py','').replace('/','.').replace('.__init__',''), None) for arg in args], options
 
 
 # Don't generate this from mypy.reports, not all are meant to be public.

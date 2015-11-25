@@ -55,6 +55,7 @@ class SameTypeVisitor(TypeVisitor[bool]):
 
     def visit_erased_type(self, left: ErasedType) -> bool:
         # Should not get here.
+        return True
         raise RuntimeError()
 
     def visit_instance(self, left: Instance) -> bool:

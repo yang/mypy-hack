@@ -616,6 +616,7 @@ class ExpressionChecker:
         # Fixed function arguments.
         func_fixed = callee.max_fixed_args()
         similarity = 2
+        if arg_types is None: return similarity
         for i in range(min(len(arg_types), func_fixed)):
             # Instead of just is_subtype, we use a relaxed overlapping check to determine
             # which overload variant could apply.
@@ -647,6 +648,7 @@ class ExpressionChecker:
 
         # Fixed function arguments.
         func_fixed = callee.max_fixed_args()
+        if arg_types is None: return True
         for i in range(min(len(arg_types), func_fixed)):
             if not is_subtype(arg_types[i], callee.arg_types[i]):
                 return False

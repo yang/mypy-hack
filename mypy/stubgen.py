@@ -91,7 +91,7 @@ def generate_stub_for_module(module: str, output_dir: str, quiet: bool = False,
                                        add_header=add_header,
                                        sigs=sigs,
                                        class_sigs=class_sigs)
-            return
+            return target
         module_path = mod.__file__
         module_all = getattr(mod, '__all__', None)
     target = module.replace('.', '/')
@@ -104,6 +104,7 @@ def generate_stub_for_module(module: str, output_dir: str, quiet: bool = False,
                   target=target, add_header=add_header, module=module, pyversion=pyversion)
     if not quiet:
         print('Created %s' % target)
+    return target
 
 
 def load_python2_module_info(module: str) -> Tuple[str, Optional[List[str]]]:
@@ -274,7 +275,7 @@ class StubGenerator(mypy.traverser.TraverserVisitor):
             elif isinstance(base, MemberExpr):
                 modname = get_qualified_name(base.expr)
                 base_types.append('%s.%s' % (modname, base.name))
-                self.add_import_line('import %s\n' % modname)
+                #self.add_import_line('import %s\n' % modname)
         return base_types
 
     def visit_assignment_stmt(self, o: AssignmentStmt) -> None:
@@ -367,7 +368,7 @@ class StubGenerator(mypy.traverser.TraverserVisitor):
 
     def import_and_export_names(self, module_id: str, relative: int, names: Iterable[str]) -> None:
         """Import names from a module and export them (via from ... import x as x)."""
-        if names and module_id:
+        if names and module_id is not None:
             full_module_name = '%s%s' % ('.' * relative, module_id)
             imported_names = ', '.join(['%s as %s' % (name, name) for name in names])
             self.add_import_line('from %s import %s\n' % (full_module_name, imported_names))
